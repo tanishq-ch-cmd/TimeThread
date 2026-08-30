@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>TimeThread | Workspace</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { background-color: #f8f9fa; height: 100vh; overflow: hidden; }
+        .sidebar { background-color: #212529; color: white; height: 100vh; padding-top: 1rem; }
+        .sidebar-item { padding: 10px 20px; color: #adb5bd; text-decoration: none; display: block; border-radius: 6px; margin: 0 10px 5px 10px; transition: 0.2s;}
+        .sidebar-item:hover, .sidebar-item.active { background-color: #343a40; color: white; }
+        .chat-container { height: 100vh; display: flex; flex-direction: column; background: white; border-right: 1px solid #dee2e6; }
+        .chat-header { padding: 20px; border-bottom: 1px solid #dee2e6; background: #fff; }
+        .chat-history { flex-grow: 1; overflow-y: auto; padding: 20px; background-color: #f8f9fa; }
+        .chat-input-area { padding: 20px; border-top: 1px solid #dee2e6; background: #fff; }
+        .schedule-panel { height: 100vh; background-color: #fff; padding: 20px; overflow-y: auto; }
+        .message-bubble { background: #e9ecef; padding: 12px 18px; border-radius: 12px; display: inline-block; max-width: 80%; margin-bottom: 15px; }
+        .message-bubble.sent { background: #212529; color: white; float: right; }
+        .clearfix::after { content: ""; clear: both; display: table; }
+    </style>
+</head>
+<body th:attr="data-group-id=${selectedGroup != null ? selectedGroup.id : ''}, data-student-id=${student.id}">
+<div class="container-fluid p-0">
+    <div class="row g-0">
+
+        <div class="col-md-2 sidebar">
+            <h5 class="text-center fw-bold mb-4 text-white">TimeThread</h5>
+            <p class="text-uppercase text-muted small fw-bold px-4 mb-2" style="font-size: 0.75rem;">Your Groups</p>
+
+            <a th:each="g : ${groups}"
+               th:href="@{/dashboard(groupId=${g.id})}"
+               th:classappend="${selectedGroup != null and selectedGroup.id == g.id ? 'active' : ''}"
+               class="sidebar-item">
+                <i class="bi bi-hash me-2"></i><span th:text="${g.name}">Group Name</span>
+            </a>
+
+            <div class="position-absolute bottom-0 w-100 p-3 text-center">
+                <form th:action="@{/logout}" method="post">
+                    <button type="submit" class="btn btn-outline-light btn-sm w-100">Sign Out</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-md-7 chat-container">
+            <div class="chat-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold" th:text="${selectedGroup != null ? '# ' + selectedGroup.name : 'No groups yet'}">#</h5>
+                <span class="badge bg-success">3 Online (P2P Active)</span>
+            </div>
+
+            <div class="chat-history clearfix" id="chat-history">
+                <div class="w-100 clearfix" th:each="m : ${messages}">
+                    <div class="message-bubble" th:classappend="${m.sender.id == student.id ? 'sent' : ''}">
+                        <small class="d-block text-muted mb-1" th:if="${m.sender.id != student.id}" th:text="${m.sender.name}"></small>
+                        <span th:text="${m.content}"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="input-group">
+                    <input type="text" id="chat-input" class="form-control bg-light border-0" placeholder="Type a message to the group...">
+                    <button id="send-btn" class="btn btn-dark px-4" type="button"><i class="bi bi-send-fill"></i></button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3 schedule-panel">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h6 class="fw-bold mb-0">Group Schedule</h6>
+                <button class="btn btn-sm btn-dark">+ New</button>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-3 bg-light">
+                <div class="card-body p-3">
+                    <p class="small text-muted mb-1 fw-bold">TODAY, 5:00 PM</p>
+                    <h6 class="fw-bold mb-1">Doubt Clearing Session</h6>
+                    <p class="small mb-0">Algorithm scored: 95% optimal time</p>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+<script>
+    const chatHistory = document.getElementById('chat-history');
+    const chatInput = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+    const groupId = document.body.getAttribute('data-group-id');
+    const currentStudentId = Number(document.body.getAttribute('data-student-id'));
+
+    function appendMessage(msg) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'w-100 clearfix';
+        const isSelf = msg.senderId === currentStudentId;
+        wrapper.innerHTML = `<div class="message-bubble${isSelf ? ' sent' : ''}">
+            ${isSelf ? '' : `<small class="d-block text-muted mb-1"></small>`}
+            <span></span>
+        </div>`;
+        if (!isSelf) wrapper.querySelector('small').textContent = msg.senderName;
+        wrapper.querySelector('span').textContent = msg.content;
+        chatHistory.appendChild(wrapper);
+        chatHistory.scrollTop = chatHistory.scrollHeight;
+    }
+
+    if (groupId) {
+        const stompClient = new StompJs.Client({
+            webSocketFactory: () => new SockJS('/ws'),
+            onConnect: () => {
+                stompClient.subscribe('/topic/group/' + groupId, message => {
+                    appendMessage(JSON.parse(message.body));
+                });
+            }
+        });
+        stompClient.activate();
+
+        function send() {
+            const content = chatInput.value.trim();
+            if (!content || !stompClient.connected) return;
+            stompClient.publish({
+                destination: '/app/chat.sendMessage/' + groupId,
+                body: JSON.stringify({ content: content })
+            });
+            chatInput.value = '';
+        }
+
+        sendBtn.addEventListener('click', send);
+        chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+    }
+
+    chatHistory.scrollTop = chatHistory.scrollHeight;
+</script>
+</body>
+</html>
