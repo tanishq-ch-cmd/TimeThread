@@ -2,49 +2,165 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <title>TimeThread | Workspace</title>
+    <link rel="icon" type="image/png" th:href="@{/images/timethread_logo_favicon.png}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+    <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js'></script>
     <style>
         body { background-color: #f8f9fa; height: 100vh; overflow: hidden; }
-        .sidebar { background-color: #212529; color: white; height: 100vh; padding-top: 1rem; }
+
+        .sidebar { background-color: #212529; color: white; height: 100vh; padding-top: 1rem; overflow-y: auto; display: flex; flex-direction: column; }
         .sidebar-item { padding: 10px 20px; color: #adb5bd; text-decoration: none; display: block; border-radius: 6px; margin: 0 10px 5px 10px; transition: 0.2s;}
         .sidebar-item:hover, .sidebar-item.active { background-color: #343a40; color: white; }
+
         .chat-container { height: 100vh; display: flex; flex-direction: column; background: white; border-right: 1px solid #dee2e6; }
         .chat-header { padding: 20px; border-bottom: 1px solid #dee2e6; background: #fff; }
         .chat-history { flex-grow: 1; overflow-y: auto; padding: 20px; background-color: #f8f9fa; }
         .chat-input-area { padding: 20px; border-top: 1px solid #dee2e6; background: #fff; }
         .schedule-panel { height: 100vh; background-color: #fff; padding: 20px; overflow-y: auto; }
+
         .message-bubble { background: #e9ecef; padding: 12px 18px; border-radius: 12px; display: inline-block; max-width: 80%; margin-bottom: 15px; }
         .message-bubble.sent { background: #212529; color: white; float: right; }
         .clearfix::after { content: ""; clear: both; display: table; }
+
+        /* --- MINECRAFT GAMIFICATION --- */
+        .mc-font { font-family: 'VT323', monospace; font-size: 1.2rem; }
+        .mc-xp-container { background-color: #373737; border: 2px solid #000; height: 18px; width: 100%; position: relative; border-radius: 0; }
+        .mc-xp-fill { background-color: #55FF55; height: 100%; border-right: 2px solid #00AA00; box-shadow: inset 0 3px 0 #A8FFA8; }
+        .mc-level-badge { background-color: #000; color: #55FF55; border: 2px solid #55FF55; padding: 2px 6px; font-weight: bold; }
+
+        /* --- FULLCALENDAR STYLING --- */
+        :root {
+            --fc-button-bg-color: #212529;
+            --fc-button-border-color: #212529;
+            --fc-button-hover-bg-color: #343a40;
+            --fc-button-hover-border-color: #343a40;
+            --fc-button-active-bg-color: #000;
+            --fc-today-bg-color: rgba(33, 37, 41, 0.05);
+        }
+        #calendar { padding-bottom: 20px; }
+        .fc-theme-standard .fc-scrollgrid { border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; }
+        .fc .fc-toolbar-title { font-weight: 700; font-size: 1.5rem; color: #212529; }
+        .fc .fc-daygrid-day-number, .fc .fc-col-header-cell-cushion { color: #495057; text-decoration: none; font-weight: 600; }
+        .fc .fc-daygrid-day-number:hover, .fc .fc-col-header-cell-cushion:hover { color: #212529; text-decoration: none; }
+        .fc-header-toolbar { margin-bottom: 1.5rem !important; }
+
+        /* Member Badge Hover */
+        .member-badge:hover { background-color: #e9ecef !important; transition: 0.2s; }
     </style>
 </head>
-<body th:attr="data-group-id=${selectedGroup != null ? selectedGroup.id : ''}, data-student-id=${student.id}">
+<body th:attr="data-group-id=${selectedGroup != null ? selectedGroup.id : ''}, data-student-id=${student.id}, data-dm-user-id=${chatUser != null ? chatUser.id : ''}">
 <div class="container-fluid p-0">
     <div class="row g-0">
 
+        <!-- LEFT COLUMN: SIDEBAR -->
         <div class="col-md-2 sidebar">
-            <h5 class="text-center fw-bold mb-4 text-white">TimeThread</h5>
-            <p class="text-uppercase text-muted small fw-bold px-4 mb-2" style="font-size: 0.75rem;">Your Groups</p>
+            <div class="text-center mb-4 mt-2 px-3">
+                <a th:href="@{/}" class="d-inline-block p-2 rounded-3 text-decoration-none shadow-sm w-100" style="max-width: 200px; background-color: #f8f9fa;">
+                    <img th:src="@{/images/timethread_logo.png}" alt="TimeThread Logo" style="width: 100%; height: auto; display: block; object-fit: contain;">
+                </a>
+            </div>
+
+            <p class="text-uppercase text-muted small fw-bold px-4 mb-2" style="font-size: 0.75rem;">Settings</p>
+            <a th:href="@{/availability}" class="sidebar-item mb-4">
+                <i class="bi bi-calendar-check me-2"></i>My Availability
+            </a>
+
+            <p class="text-uppercase text-muted small fw-bold px-4 mb-2" style="font-size: 0.75rem;">Workspace</p>
+
+            <a th:href="@{/dashboard(clear=true)}" class="sidebar-item mb-2" th:classappend="${selectedGroup == null and chatUser == null ? 'active' : ''}">
+                <i class="bi bi-calendar3 me-2"></i>My Planner
+            </a>
+
+            <a th:if="${chatUser != null}" href="#" class="sidebar-item mb-2 active">
+                <i class="bi bi-person-lines-fill me-2"></i>Chat: <span th:text="${chatUser.name}">Name</span>
+            </a>
+
+            <hr class="border-secondary mx-3 my-3">
+            <p class="text-uppercase text-muted small fw-bold px-4 mb-2" style="font-size: 0.75rem;">Study Groups</p>
+
+            <div th:if="${groups.isEmpty()}" class="text-muted small px-4 mb-2">No groups yet.</div>
 
             <a th:each="g : ${groups}"
                th:href="@{/dashboard(groupId=${g.id})}"
                th:classappend="${selectedGroup != null and selectedGroup.id == g.id ? 'active' : ''}"
                class="sidebar-item">
-                <i class="bi bi-hash me-2"></i><span th:text="${g.name}">Group Name</span>
+                <i class="bi bi-hash me-2"></i><span th:text="${g.name}">Group</span>
             </a>
 
-            <div class="position-absolute bottom-0 w-100 p-3 text-center">
-                <form th:action="@{/logout}" method="post">
+            <form th:action="@{/groups}" method="post" class="px-3 mt-2 mb-4">
+                <div class="input-group input-group-sm">
+                    <input type="text" name="name" class="form-control bg-dark text-white border-secondary" placeholder="New group name" required>
+                    <button type="submit" class="btn btn-outline-light"><i class="bi bi-plus-lg"></i></button>
+                </div>
+            </form>
+
+            <div class="mt-auto p-3 text-center w-100 border-top border-secondary">
+                <form th:action="@{/logout}" method="post" class="mb-0">
                     <button type="submit" class="btn btn-outline-light btn-sm w-100">Sign Out</button>
                 </form>
             </div>
         </div>
 
-        <div class="col-md-7 chat-container">
-            <div class="chat-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0 fw-bold" th:text="${selectedGroup != null ? '# ' + selectedGroup.name : 'No groups yet'}">#</h5>
-                <span class="badge bg-success">3 Online (P2P Active)</span>
+        <!-- MIDDLE COLUMN STATE 1: GROUP CHAT -->
+        <div class="col-md-7 chat-container" th:if="${selectedGroup != null}">
+            <div class="chat-header">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span id="online-badge" class="badge bg-secondary">Offline</span>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <h5 class="mb-0 fw-bold" th:text="'# ' + ${selectedGroup.name}">#</h5>
+
+                        <div class="dropdown" th:if="${selectedGroup.creator != null and selectedGroup.creator.id == student.id}">
+                            <button class="btn btn-sm btn-link text-dark p-0 border-0" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-gear-fill fs-5"></i>
+                            </button>
+                            <ul class="dropdown-menu shadow border-0">
+                                <li>
+                                    <form th:action="@{'/groups/' + ${selectedGroup.id} + '/rename'}" method="post" class="px-3 py-1">
+                                        <label class="form-label small fw-bold mb-1">Rename Group</label>
+                                        <div class="input-group input-group-sm">
+                                            <input type="text" name="newName" class="form-control" th:value="${selectedGroup.name}" required>
+                                            <button type="submit" class="btn btn-dark">Save</button>
+                                        </div>
+                                    </form>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <form th:action="@{'/groups/' + ${selectedGroup.id} + '/delete'}" method="post" class="px-3">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger w-100 fw-bold">Delete Group</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <span class="badge bg-secondary" th:text="${#lists.size(selectedGroup.students)} + ' member(s)'">0 member(s)</span>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-1 mb-2">
+                    <span th:each="member : ${selectedGroup.students}" class="badge bg-light text-dark border member-badge d-flex align-items-center gap-1" style="cursor: pointer;"
+                          th:data-id="${member.id}"
+                          th:data-name="${member.name}"
+                          th:data-joined="${member.dateJoined != null ? member.dateJoined : 'Today'}"
+                          th:data-group-id="${selectedGroup.id}"
+                          th:data-is-admin="${selectedGroup.creator != null and selectedGroup.creator.id == student.id}"
+                          th:data-pic="${member.profilePicture}"
+                          onclick="openUserProfile(this.dataset.id, this.dataset.name, this.dataset.joined, this.dataset.groupId, this.dataset.isAdmin, this.dataset.pic)">
+
+                        <img th:if="${member.profilePicture != null}" th:src="@{'/uploads/' + ${member.profilePicture}}" class="rounded-circle" style="width: 16px; height: 16px; object-fit: cover;">
+                        <i th:if="${member.profilePicture == null}" class="bi bi-person-fill"></i>
+                        <span th:text="${member.name}">Name</span>
+                    </span>
+                </div>
+
+                <form th:if="${selectedGroup.creator != null and selectedGroup.creator.id == student.id}"
+                      th:action="@{'/groups/' + ${selectedGroup.id} + '/invite'}" method="post"
+                      class="d-flex" style="max-width: 320px;">
+                    <input type="email" name="email" class="form-control form-control-sm me-2" placeholder="Invite by email" required>
+                    <button type="submit" class="btn btn-sm btn-dark">Invite</button>
+                </form>
             </div>
 
             <div class="chat-history clearfix" id="chat-history">
@@ -64,73 +180,476 @@
             </div>
         </div>
 
-        <div class="col-md-3 schedule-panel">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h6 class="fw-bold mb-0">Group Schedule</h6>
-                <button class="btn btn-sm btn-dark">+ New</button>
+        <!-- MIDDLE COLUMN STATE 2: DIRECT MESSAGING (1-ON-1) -->
+        <div class="col-md-7 chat-container" th:if="${chatUser != null}">
+            <div class="chat-header bg-light">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                        <img th:if="${chatUser.profilePicture != null}" th:src="@{'/uploads/' + ${chatUser.profilePicture}}" class="rounded-circle border" style="width: 32px; height: 32px; object-fit: cover;">
+                        <i th:if="${chatUser.profilePicture == null}" class="bi bi-person-circle text-dark fs-4"></i>
+                        <span>Private Chat: <span th:text="${chatUser.name}">User</span></span>
+                    </h5>
+                    <span class="badge bg-success">Encrypted P2P Connection</span>
+                </div>
             </div>
 
-            <div class="card border-0 shadow-sm mb-3 bg-light">
-                <div class="card-body p-3">
-                    <p class="small text-muted mb-1 fw-bold">TODAY, 5:00 PM</p>
-                    <h6 class="fw-bold mb-1">Doubt Clearing Session</h6>
-                    <p class="small mb-0">Algorithm scored: 95% optimal time</p>
+            <div class="chat-history clearfix" id="dm-chat-history">
+                <div class="w-100 clearfix" th:each="m : ${dmMessages}">
+                    <div class="message-bubble" th:classappend="${m.sender.id == student.id ? 'sent' : ''}">
+                        <span th:text="${m.content}"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-area">
+                <div class="input-group">
+                    <input type="text" id="dm-chat-input" class="form-control bg-light border-0" placeholder="Type a direct message...">
+                    <button id="dm-send-btn" class="btn btn-dark px-4" type="button"><i class="bi bi-send-fill"></i></button>
                 </div>
             </div>
         </div>
 
+        <!-- MIDDLE COLUMN STATE 3: CALENDAR (Default) -->
+        <div class="col-md-7 chat-container p-4" th:if="${selectedGroup == null and chatUser == null}">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">My Personal Planner</h5>
+                <button class="btn btn-sm btn-dark" data-bs-toggle="modal" data-bs-target="#newTaskModal">+ New Task</button>
+            </div>
+            <div id="calendar" class="w-100 h-100"></div>
+        </div>
+
+        <!-- RIGHT COLUMN: DYNAMIC PANEL -->
+        <div class="col-md-3 schedule-panel border-start">
+
+            <!-- STATE A: GROUP SCHEDULE -->
+            <div th:if="${selectedGroup != null}">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h6 class="fw-bold mb-0">Shared Schedule</h6>
+                    <a th:href="@{/availability}" class="btn btn-sm btn-dark">+ Add My Time</a>
+                </div>
+
+                <div th:if="${optimalSlots == null or optimalSlots.isEmpty()}" class="text-center text-muted mt-5">
+                    <i class="bi bi-calendar-x fs-2 d-block mb-3 opacity-25"></i>
+                    <h6 class="fw-bold">No overlaps found</h6>
+                    <p class="small mb-0 px-2">The algorithm needs more free time blocks from the group to find a match.</p>
+                </div>
+
+                <div th:if="${optimalSlots != null and !optimalSlots.isEmpty()}">
+                    <p class="text-uppercase text-muted small fw-bold mb-3" style="font-size: 0.75rem;">Optimal Study Times</p>
+
+                    <div th:each="slot, iterStat : ${optimalSlots}" class="card border-0 shadow-sm mb-2" th:classappend="${iterStat.first ? 'bg-dark text-white' : 'bg-light text-dark'}">
+                        <div class="card-body p-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <p class="small mb-0 fw-bold" th:text="${slot.day}">MONDAY</p>
+                                <span th:if="${iterStat.first}" class="badge bg-success" style="font-size: 0.65rem;">Top Match</span>
+                            </div>
+                            <h6 class="fw-bold mb-1">
+                                <span th:text="${slot.start}">10:00</span> - <span th:text="${slot.end}">12:00</span>
+                            </h6>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATE B: HABIT TRACKER -->
+            <div th:if="${selectedGroup == null and chatUser == null}">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h6 class="fw-bold mb-0">My Routines</h6>
+                    <button class="btn btn-sm btn-dark" data-bs-toggle="modal" data-bs-target="#newRoutineModal">+ New</button>
+                </div>
+
+                <div th:if="${routines == null or routines.isEmpty()}" class="text-center text-muted mt-5">
+                    <i class="bi bi-activity fs-2 d-block mb-3 opacity-25"></i>
+                    <h6 class="fw-bold">No routines yet</h6>
+                    <p class="small mb-0 px-2">Track your daily streaks here.</p>
+                </div>
+
+                <!-- Routine Cards -->
+                <div th:each="routine : ${routines}" class="card border-0 shadow-sm mb-3">
+                    <div class="card-body p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="badge bg-light text-dark border mb-1" style="font-size: 0.65rem;" th:text="${routine.category}">Category</span>
+                                <h6 class="fw-bold mb-0" th:text="${routine.name}">Routine Name</h6>
+                            </div>
+                            <form th:action="@{'/routines/' + ${routine.id} + '/delete'}" method="post">
+                                <button type="submit" class="btn btn-link text-danger p-0 border-0"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                            <div class="text-center px-2">
+                                <p class="small text-muted mb-0" style="font-size: 0.7rem;">Current</p>
+                                <h5 class="fw-bold mb-0"><i class="bi bi-fire text-danger"></i> <span th:text="${routine.currentStreak}">0</span></h5>
+                            </div>
+                            <div class="text-center px-2 border-start border-end">
+                                <p class="small text-muted mb-0" style="font-size: 0.7rem;">Best</p>
+                                <h5 class="fw-bold mb-0 text-dark" th:text="${routine.longestStreak}">0</h5>
+                            </div>
+                            <div class="px-2">
+                                <form th:action="@{'/routines/' + ${routine.id} + '/checkin'}" method="post">
+                                    <button type="submit" class="btn btn-sm btn-dark rounded-pill fw-bold" style="font-size: 0.75rem;">Check In</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STATE C: DIRECT MESSAGING -->
+            <div th:if="${chatUser != null}" class="text-center text-muted mt-5">
+                <i class="bi bi-shield-lock fs-2 d-block mb-3 opacity-25"></i>
+                <h6 class="fw-bold">Private Connection</h6>
+                <p class="small mb-0 px-2">End-to-end encrypted direct messaging.</p>
+            </div>
+
+        </div>
     </div>
 </div>
 
+<!-- ========================================== -->
+<!-- UI MODALS & OVERLAYS -->
+<!-- ========================================== -->
+
+<!-- FLOATING MY PROFILE BADGE -->
+<div class="position-fixed bottom-0 end-0 p-4" style="z-index: 1050;" th:if="${chatUser == null}">
+    <div class="card border-0 shadow rounded-pill" style="cursor: pointer; transition: 0.2s;"
+         onmouseover="this.classList.add('bg-light')" onmouseout="this.classList.remove('bg-light')"
+         data-bs-toggle="modal" data-bs-target="#myProfileModal">
+        <div class="card-body p-2 d-flex align-items-center gap-2">
+
+            <img th:if="${student.profilePicture != null}" th:src="@{'/uploads/' + ${student.profilePicture}}" class="rounded-circle shadow-sm border" style="width: 45px; height: 45px; object-fit: cover;">
+            <div th:if="${student.profilePicture == null}" class="bg-dark text-white rounded-circle d-flex justify-content-center align-items-center" style="width: 45px; height: 45px;">
+                <i class="bi bi-person-fill fs-5"></i>
+            </div>
+
+            <div class="pe-3">
+                <h6 class="mb-0 fw-bold small" th:text="${student.name}">Name</h6>
+                <small class="text-muted" style="font-size: 0.7rem;">My Profile</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MY PROFILE MODAL -->
+<div class="modal fade" id="myProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow text-center p-4">
+            <div class="d-flex justify-content-end w-100">
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Dynamic Avatar -->
+            <img th:if="${student.profilePicture != null}" th:src="@{'/uploads/' + ${student.profilePicture}}" class="rounded-circle mx-auto mb-3 shadow-sm border" style="width: 90px; height: 90px; object-fit: cover;">
+            <div th:if="${student.profilePicture == null}" class="bg-dark text-white rounded-circle d-flex justify-content-center align-items-center mx-auto mb-3 shadow-sm" style="width: 90px; height: 90px;">
+                <i class="bi bi-person-fill" style="font-size: 3rem;"></i>
+            </div>
+
+            <h4 class="fw-bold mb-1" th:text="${student.name}">User Name</h4>
+            <p class="text-muted small mb-2">Joined: <span class="fw-bold text-dark" th:text="${student.dateJoined != null ? student.dateJoined : 'Today'}">Date</span></p>
+
+            <!-- MINECRAFT XP BAR -->
+            <div class="w-100 px-3 mb-4 mt-2">
+                <div class="d-flex justify-content-between align-items-end mb-1 mc-font">
+                    <span class="mc-level-badge">LVL <span th:text="${student.level}">1</span></span>
+                    <span class="text-muted small"><span th:text="${student.xp}">0</span> / 100 XP</span>
+                </div>
+                <div class="mc-xp-container shadow-sm">
+                    <div class="mc-xp-fill" th:style="'width: ' + ${student.xp} + '%;'"></div>
+                </div>
+            </div>
+
+            <!-- The Image Upload Engine -->
+            <form th:action="@{/profile/upload}" method="post" enctype="multipart/form-data" class="mb-3 w-100">
+                <div class="input-group input-group-sm">
+                    <input type="file" name="image" class="form-control form-control-sm" accept="image/*" required>
+                    <button class="btn btn-dark btn-sm" type="submit">Upload</button>
+                </div>
+            </form>
+
+            <hr class="w-100 mx-auto text-muted mt-0">
+            <a th:href="@{/availability}" class="btn btn-outline-dark btn-sm rounded-pill w-100 mt-2">View My Availability</a>
+        </div>
+    </div>
+</div>
+
+<!-- FRIEND PROFILE MODAL -->
+<div class="modal fade" id="friendProfileModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow text-center p-4">
+            <div class="d-flex justify-content-end w-100">
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Friend's Dynamic Avatar Placeholders -->
+            <img id="fp-image-container" src="" class="rounded-circle mx-auto mb-3 shadow-sm border d-none" style="width: 90px; height: 90px; object-fit: cover;">
+            <div id="fp-icon-container" class="bg-light text-dark border rounded-circle d-flex justify-content-center align-items-center mx-auto mb-3 shadow-sm" style="width: 90px; height: 90px;">
+                <i class="bi bi-person-fill" style="font-size: 3rem;"></i>
+            </div>
+
+            <h4 class="fw-bold mb-1" id="fp-name">Friend Name</h4>
+            <p class="text-muted small mb-3">Joined: <span class="fw-bold text-dark" id="fp-joined">Date</span></p>
+            <hr class="w-75 mx-auto text-muted">
+            <a href="#" id="fp-dm-btn" class="btn btn-dark btn-sm rounded-pill px-4 mt-2 shadow-sm mb-2"><i class="bi bi-chat-dots-fill me-2"></i>Send Message</a>
+
+            <form id="fp-kick-form" method="post" class="d-none mt-1">
+                <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-4 w-100">Kick from Group</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- DELETE TASK MODAL -->
+<div class="modal fade" id="taskDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow text-center p-4">
+            <h5 class="fw-bold mb-2" id="td-title">Task Title</h5>
+            <p class="text-muted small mb-4">Would you like to remove this task from your planner?</p>
+            <form id="deleteTaskForm" method="post">
+                <div class="d-flex justify-content-center gap-2">
+                    <button type="button" class="btn btn-light btn-sm px-3 rounded-pill" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger btn-sm px-3 rounded-pill">Delete Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- NEW TASK MODAL -->
+<div class="modal fade" id="newTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light border-bottom-0">
+                <h5 class="modal-title fw-bold">Create New Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form th:action="@{/tasks/add}" method="post" class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label fw-bold small">Task Title</label>
+                        <input type="text" name="title" class="form-control" placeholder="E.g. Study Physics" required>
+                    </div>
+
+                    <div class="col-6">
+                        <label class="form-label fw-bold small">Start Time</label>
+                        <input type="time" name="startTime" class="form-control" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-bold small">End Time</label>
+                        <input type="time" name="endTime" class="form-control" required>
+                    </div>
+
+                    <div class="col-12 mt-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="recurring" id="recurringToggle">
+                            <label class="form-check-label fw-bold small" for="recurringToggle">Make this a recurring weekly task</label>
+                        </div>
+                    </div>
+
+                    <div class="col-12" id="singleDateBlock">
+                        <label class="form-label fw-bold small text-muted">Specific Date</label>
+                        <input type="date" name="specificDate" class="form-control">
+                    </div>
+
+                    <div class="col-12 d-none" id="recurringDaysBlock">
+                        <label class="form-label fw-bold small text-muted mb-2">Repeats On</label>
+                        <div class="d-flex flex-wrap gap-2">
+                            <div class="form-check"><input class="form-check-input" type="checkbox" name="daysOfWeek" value="1" id="d1"><label class="form-check-label small" for="d1">Mon</label></div>
+                            <div class="form-check"><input class="form-check-input" type="checkbox" name="daysOfWeek" value="2" id="d2"><label class="form-check-label small" for="d2">Tue</label></div>
+                            <div class="form-check"><input class="form-check-input" type="checkbox" name="daysOfWeek" value="3" id="d3"><label class="form-check-label small" for="d3">Wed</label></div>
+                            <div class="form-check"><input class="form-check-input" type="checkbox" name="daysOfWeek" value="4" id="d4"><label class="form-check-label small" for="d4">Thu</label></div>
+                            <div class="form-check"><input class="form-check-input" type="checkbox" name="daysOfWeek" value="5" id="d5"><label class="form-check-label small" for="d5">Fri</label></div>
+                            <div class="form-check"><input class="form-check-input" type="checkbox" name="daysOfWeek" value="6" id="d6"><label class="form-check-label small" for="d6">Sat</label></div>
+                            <div class="form-check"><input class="form-check-input" type="checkbox" name="daysOfWeek" value="0" id="d0"><label class="form-check-label small" for="d0">Sun</label></div>
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-4 text-end">
+                        <button type="submit" class="btn btn-dark px-4 py-2 w-100 fw-bold">Save to Planner</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- NEW ROUTINE MODAL -->
+<div class="modal fade" id="newRoutineModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-light border-bottom-0">
+                <h5 class="modal-title fw-bold">New Routine</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form th:action="@{/routines/add}" method="post">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small">Routine Name</label>
+                        <input type="text" name="name" class="form-control" placeholder="E.g. Push-Pull-Legs Split" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="form-label fw-bold small">Category</label>
+                        <select name="category" class="form-select">
+                            <option value="Fitness">Fitness</option>
+                            <option value="Nutrition">Nutrition</option>
+                            <option value="Academics">Academics</option>
+                            <option value="Coding">Coding</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-dark w-100 fw-bold">Start Tracking</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- JAVASCRIPT & WEBSOCKET ENGINE -->
+<!-- ========================================== -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
-<script>
-    const chatHistory = document.getElementById('chat-history');
-    const chatInput = document.getElementById('chat-input');
-    const sendBtn = document.getElementById('send-btn');
-    const groupId = document.body.getAttribute('data-group-id');
-    const currentStudentId = Number(document.body.getAttribute('data-student-id'));
 
-    function appendMessage(msg) {
+<script>
+    const currentStudentId = Number(document.body.getAttribute('data-student-id'));
+    const groupId = document.body.getAttribute('data-group-id');
+    const dmUserId = document.body.getAttribute('data-dm-user-id');
+
+    const recurToggle = document.getElementById('recurringToggle');
+    if (recurToggle) {
+        recurToggle.addEventListener('change', function() {
+            if(this.checked) {
+                document.getElementById('singleDateBlock').classList.add('d-none');
+                document.getElementById('recurringDaysBlock').classList.remove('d-none');
+            } else {
+                document.getElementById('singleDateBlock').classList.remove('d-none');
+                document.getElementById('recurringDaysBlock').classList.add('d-none');
+            }
+        });
+    }
+
+    function openUserProfile(id, name, dateJoined, groupId, isAdmin, picUrl) {
+        if (Number(id) === currentStudentId) {
+            new bootstrap.Modal(document.getElementById('myProfileModal')).show();
+            return;
+        }
+        document.getElementById('fp-name').textContent = name;
+        document.getElementById('fp-joined').textContent = dateJoined;
+        document.getElementById('fp-dm-btn').href = '/dashboard?dmUserId=' + id;
+
+        if (picUrl && picUrl !== 'null' && picUrl !== '') {
+            document.getElementById('fp-icon-container').classList.add('d-none');
+            const imgContainer = document.getElementById('fp-image-container');
+            imgContainer.src = '/uploads/' + picUrl;
+            imgContainer.classList.remove('d-none');
+        } else {
+            document.getElementById('fp-icon-container').classList.remove('d-none');
+            document.getElementById('fp-image-container').classList.add('d-none');
+        }
+
+        const kickForm = document.getElementById('fp-kick-form');
+        if (isAdmin === 'true' && groupId) {
+            kickForm.classList.remove('d-none');
+            kickForm.action = '/groups/' + groupId + '/kick/' + id;
+        } else {
+            kickForm.classList.add('d-none');
+        }
+
+        new bootstrap.Modal(document.getElementById('friendProfileModal')).show();
+    }
+
+    function buildMessageWrapper(msg, isSelf) {
         const wrapper = document.createElement('div');
         wrapper.className = 'w-100 clearfix';
-        const isSelf = msg.senderId === currentStudentId;
         wrapper.innerHTML = `<div class="message-bubble${isSelf ? ' sent' : ''}">
             ${isSelf ? '' : `<small class="d-block text-muted mb-1"></small>`}
             <span></span>
         </div>`;
-        if (!isSelf) wrapper.querySelector('small').textContent = msg.senderName;
+        if (!isSelf) {
+            const senderName = msg.senderName || (msg.sender ? msg.sender.name : 'Member');
+            wrapper.querySelector('small').textContent = senderName;
+        }
         wrapper.querySelector('span').textContent = msg.content;
-        chatHistory.appendChild(wrapper);
-        chatHistory.scrollTop = chatHistory.scrollHeight;
+        return wrapper;
     }
 
-    if (groupId) {
+    if (groupId || dmUserId) {
         const stompClient = new StompJs.Client({
             webSocketFactory: () => new SockJS('/ws'),
             onConnect: () => {
-                stompClient.subscribe('/topic/group/' + groupId, message => {
-                    appendMessage(JSON.parse(message.body));
-                });
+                const onlineBadge = document.getElementById('online-badge');
+                if (onlineBadge) {
+                    onlineBadge.className = 'badge bg-success';
+                    onlineBadge.textContent = 'Online';
+                }
+
+                if (groupId) {
+                    stompClient.subscribe('/topic/group/' + groupId, msg => {
+                        const m = JSON.parse(msg.body);
+                        const chatHistory = document.getElementById('chat-history');
+                        if (chatHistory) {
+                            chatHistory.appendChild(buildMessageWrapper(m, m.senderId === currentStudentId));
+                            chatHistory.scrollTop = chatHistory.scrollHeight;
+                        }
+                    });
+                } else if (dmUserId) {
+                    const roomName = Math.min(currentStudentId, Number(dmUserId)) + '_' + Math.max(currentStudentId, Number(dmUserId));
+                    stompClient.subscribe('/topic/dm/' + roomName, msg => {
+                        const m = JSON.parse(msg.body);
+                        const chatHistory = document.getElementById('dm-chat-history');
+                        if (chatHistory) {
+                            chatHistory.appendChild(buildMessageWrapper(m, m.senderId === currentStudentId));
+                            chatHistory.scrollTop = chatHistory.scrollHeight;
+                        }
+                    });
+                }
             }
         });
         stompClient.activate();
 
-        function send() {
-            const content = chatInput.value.trim();
+        function fireMessage() {
+            const inputEl = groupId ? document.getElementById('chat-input') : document.getElementById('dm-chat-input');
+            const content = inputEl.value.trim();
             if (!content || !stompClient.connected) return;
-            stompClient.publish({
-                destination: '/app/chat.sendMessage/' + groupId,
-                body: JSON.stringify({ content: content })
-            });
-            chatInput.value = '';
+
+            if (groupId) {
+                stompClient.publish({ destination: '/app/chat.sendMessage/' + groupId, body: JSON.stringify({content: content}) });
+            } else if (dmUserId) {
+                stompClient.publish({ destination: '/app/chat.sendDM', body: JSON.stringify({receiverId: Number(dmUserId), content: content}) });
+            }
+            inputEl.value = '';
         }
 
-        sendBtn.addEventListener('click', send);
-        chatInput.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
+        const btnEl = groupId ? document.getElementById('send-btn') : document.getElementById('dm-send-btn');
+        const inputEl = groupId ? document.getElementById('chat-input') : document.getElementById('dm-chat-input');
+
+        if (btnEl) btnEl.addEventListener('click', fireMessage);
+        if (inputEl) inputEl.addEventListener('keydown', e => { if (e.key === 'Enter') fireMessage(); });
+
+        const histEl = groupId ? document.getElementById('chat-history') : document.getElementById('dm-chat-history');
+        if (histEl) histEl.scrollTop = histEl.scrollHeight;
     }
 
-    chatHistory.scrollTop = chatHistory.scrollHeight;
+    document.addEventListener('DOMContentLoaded', function() {
+        const calendarEl = document.getElementById('calendar');
+        if (calendarEl) {
+            const calendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                height: '100%',
+                headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,timeGridDay' },
+                buttonText: { today: 'Today', month: 'Month', week: 'Week', day: 'Day' },
+                events: '/calendar/events',
+                eventClick: function(info) {
+                    const taskId = info.event.id;
+                    const taskTitle = info.event.title;
+                    document.getElementById('td-title').textContent = taskTitle;
+                    document.getElementById('deleteTaskForm').action = '/tasks/delete/' + taskId;
+                    new bootstrap.Modal(document.getElementById('taskDetailsModal')).show();
+                }
+            });
+            calendar.render();
+        }
+    });
 </script>
 </body>
 </html>
