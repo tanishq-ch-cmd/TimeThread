@@ -22,7 +22,7 @@ public class StudentController {
             return ResponseEntity.badRequest().body("Email already registered");
         }
         student.setPassword(passwordEncoder.encode(student.getPassword()));
-        student.setGroups(groupRepository.findAll()); // demo shortcut — real group join/create comes later
+        student.setGroups(groupRepository.findAll());
         Student saved = studentRepository.save(student);
         return ResponseEntity.ok(saved);
     }

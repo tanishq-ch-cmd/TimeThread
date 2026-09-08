@@ -25,6 +25,7 @@ public class UIController {
     @Autowired
     private RoutineRepository routineRepository;
 
+
     @GetMapping("/")
     public String home() {
         return "index";

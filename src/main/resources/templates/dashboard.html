@@ -149,7 +149,7 @@
                           th:data-pic="${member.profilePicture}"
                           onclick="openUserProfile(this.dataset.id, this.dataset.name, this.dataset.joined, this.dataset.groupId, this.dataset.isAdmin, this.dataset.pic)">
 
-                        <img th:if="${member.profilePicture != null}" th:src="@{'/uploads/' + ${member.profilePicture}}" class="rounded-circle" style="width: 16px; height: 16px; object-fit: cover;">
+                        <img th:if="${member.profilePicture != null}" th:src="${member.profilePicture}" class="rounded-circle" style="width: 16px; height: 16px; object-fit: cover;">
                         <i th:if="${member.profilePicture == null}" class="bi bi-person-fill"></i>
                         <span th:text="${member.name}">Name</span>
                     </span>
@@ -185,7 +185,7 @@
             <div class="chat-header bg-light">
                 <div class="d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-bold d-flex align-items-center gap-2">
-                        <img th:if="${chatUser.profilePicture != null}" th:src="@{'/uploads/' + ${chatUser.profilePicture}}" class="rounded-circle border" style="width: 32px; height: 32px; object-fit: cover;">
+                        <img th:if="${chatUser.profilePicture != null}" th:src="${chatUser.profilePicture}" class="rounded-circle border" style="width: 32px; height: 32px; object-fit: cover;">
                         <i th:if="${chatUser.profilePicture == null}" class="bi bi-person-circle text-dark fs-4"></i>
                         <span>Private Chat: <span th:text="${chatUser.name}">User</span></span>
                     </h5>
@@ -318,7 +318,7 @@
          data-bs-toggle="modal" data-bs-target="#myProfileModal">
         <div class="card-body p-2 d-flex align-items-center gap-2">
 
-            <img th:if="${student.profilePicture != null}" th:src="@{'/uploads/' + ${student.profilePicture}}" class="rounded-circle shadow-sm border" style="width: 45px; height: 45px; object-fit: cover;">
+            <img th:if="${student.profilePicture != null}" th:src="${student.profilePicture}" class="rounded-circle shadow-sm border" style="width: 45px; height: 45px; object-fit: cover;">
             <div th:if="${student.profilePicture == null}" class="bg-dark text-white rounded-circle d-flex justify-content-center align-items-center" style="width: 45px; height: 45px;">
                 <i class="bi bi-person-fill fs-5"></i>
             </div>
@@ -340,7 +340,7 @@
             </div>
 
             <!-- Dynamic Avatar -->
-            <img th:if="${student.profilePicture != null}" th:src="@{'/uploads/' + ${student.profilePicture}}" class="rounded-circle mx-auto mb-3 shadow-sm border" style="width: 90px; height: 90px; object-fit: cover;">
+            <img th:if="${student.profilePicture != null}" th:src="${student.profilePicture}" class="rounded-circle mx-auto mb-3 shadow-sm border" style="width: 90px; height: 90px; object-fit: cover;">
             <div th:if="${student.profilePicture == null}" class="bg-dark text-white rounded-circle d-flex justify-content-center align-items-center mx-auto mb-3 shadow-sm" style="width: 90px; height: 90px;">
                 <i class="bi bi-person-fill" style="font-size: 3rem;"></i>
             </div>
@@ -540,7 +540,8 @@
         if (picUrl && picUrl !== 'null' && picUrl !== '') {
             document.getElementById('fp-icon-container').classList.add('d-none');
             const imgContainer = document.getElementById('fp-image-container');
-            imgContainer.src = '/uploads/' + picUrl;
+            // Cloudinary URLs are already fully qualified web links
+            imgContainer.src = picUrl;
             imgContainer.classList.remove('d-none');
         } else {
             document.getElementById('fp-icon-container').classList.remove('d-none');
