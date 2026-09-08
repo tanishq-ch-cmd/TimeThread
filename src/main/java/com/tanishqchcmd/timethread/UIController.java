@@ -24,6 +24,8 @@ public class UIController {
     private DirectMessageRepository dmRepository;
     @Autowired
     private RoutineRepository routineRepository;
+    @Autowired
+    private GroupRepository groupRepository;
 
 
     @GetMapping("/")
@@ -48,7 +50,8 @@ public class UIController {
                             @RequestParam(required = false) Boolean clear) {
 
         Student student = studentRepository.findByEmail(authentication.getName()).orElseThrow();
-        List<Group> groups = student.getGroups();
+        List<Group> groups = groupRepository.findByStudentsId(student.getId());
+        model.addAttribute("groups", groups);
 
         Group selectedGroup = null;
         Student chatUser = null; // Represents the person you are DMing

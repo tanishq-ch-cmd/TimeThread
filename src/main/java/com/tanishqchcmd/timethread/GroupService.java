@@ -15,18 +15,15 @@ public class GroupService {
     @Autowired
     private StudentRepository studentRepository;
 
-    public Group createGroup(String name, Student creator) {
+    public Group createGroup(String name, Student student) {
         Group group = new Group();
         group.setName(name);
-        group.setCreator(creator);
-        Group savedGroup = groupRepository.save(group);
+        group.setCreator(student);
 
-        List<Group> creatorGroups = new ArrayList<>(creator.getGroups());
-        creatorGroups.add(savedGroup);
-        creator.setGroups(creatorGroups);
-        studentRepository.save(creator);
+        // Ensure the creator is part of the group's members so it appears on their dashboard!
+        group.getStudents().add(student);
 
-        return savedGroup;
+        return groupRepository.save(group);
     }
 
     public void inviteMember(Long groupId, String email, Student requestingStudent) {
