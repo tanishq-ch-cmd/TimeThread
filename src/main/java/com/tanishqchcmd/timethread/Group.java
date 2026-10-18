@@ -3,7 +3,7 @@ package com.tanishqchcmd.timethread;
 import jakarta.persistence.*;
 import java.util.List;
 import com.fasterxml.jackson.annotation.JsonIgnore;
-
+import java.util.ArrayList;
 @Entity
 @Table(name = "groups")
 public class Group {
@@ -19,7 +19,7 @@ public class Group {
 
     @ManyToMany(mappedBy = "groups")
     @JsonIgnore
-    private List<Student> students;
+    private List<Student> students = new ArrayList<>();
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }

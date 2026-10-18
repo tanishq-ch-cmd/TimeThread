@@ -21,6 +21,9 @@ public class GroupService {
         group.setCreator(student);
 
         // Ensure the creator is part of the group's members so it appears on their dashboard!
+        if (group.getStudents() == null) {
+            group.setStudents(new ArrayList<>());
+        }
         group.getStudents().add(student);
 
         return groupRepository.save(group);
