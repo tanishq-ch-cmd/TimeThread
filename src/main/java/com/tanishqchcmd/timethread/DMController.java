@@ -6,6 +6,7 @@ import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 
+import javax.crypto.SecretKey;
 import java.security.Principal;
 
 @Controller
@@ -23,24 +24,36 @@ public class DMController {
         Student sender = studentRepository.findByEmail(principal.getName()).orElseThrow();
         Student receiver = studentRepository.findById(request.getReceiverId()).orElseThrow();
 
-        // Save to database
+        // 1. Fetch the Master AES-256 Key
+        SecretKey masterKey = CryptoEngine.getMasterKey();
+        String encryptedContent;
+
+        try {
+            // 2. Encrypt the raw text before it touches the database
+            encryptedContent = CryptoEngine.encrypt(request.getContent(), masterKey);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return; // Abort transmission completely if encryption fails
+        }
+
+        // 3. Save the encrypted ciphertext to PostgreSQL
         DirectMessage dm = new DirectMessage();
         dm.setSender(sender);
         dm.setReceiver(receiver);
-        dm.setContent(request.getContent());
+        dm.setContent(encryptedContent); // Database only sees ciphertext!
         dmRepository.save(dm);
 
-        // Create a unique, consistent room ID for these two users (e.g., "3_5")
+        // 4. Create a unique, consistent room ID for these two users
         Long id1 = Math.min(sender.getId(), receiver.getId());
         Long id2 = Math.max(sender.getId(), receiver.getId());
         String roomName = id1 + "_" + id2;
 
-        // Build the response
+        // 5. Build the WebSocket response using the CLEAN text so the UI can read it live
         DMResponse response = new DMResponse();
         response.setId(dm.getId());
         response.setSenderId(sender.getId());
         response.setSenderName(sender.getName());
-        response.setContent(dm.getContent());
+        response.setContent(request.getContent()); // Push clean text to live active users
 
         // Send it only to this specific private room
         messagingTemplate.convertAndSend("/topic/dm/" + roomName, response);
