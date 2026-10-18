@@ -20,13 +20,17 @@ public class GroupService {
         group.setName(name);
         group.setCreator(student);
 
-        // Ensure the creator is part of the group's members so it appears on their dashboard!
-        if (group.getStudents() == null) {
-            group.setStudents(new ArrayList<>());
-        }
-        group.getStudents().add(student);
+        // Save the group first so it generates an ID in the database
+        group = groupRepository.save(group);
 
-        return groupRepository.save(group);
+        // THE FIX: Update the owning side of the relationship (Student)
+        if (student.getGroups() == null) {
+            student.setGroups(new java.util.ArrayList<>());
+        }
+        student.getGroups().add(group);
+        studentRepository.save(student); // This forces Hibernate to write to the join table
+
+        return group;
     }
 
     public void inviteMember(Long groupId, String email, Student requestingStudent) {

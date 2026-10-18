@@ -62,12 +62,12 @@
                 </a>
             </div>
 
-            <p class="text-uppercase text-muted small fw-bold px-4 mb-2" style="font-size: 0.75rem;">Settings</p>
+            <p class="text-uppercase text-white small fw-bold px-4 mb-2" style="font-size: 0.75rem;">Settings</p>
             <a th:href="@{/availability}" class="sidebar-item mb-4">
                 <i class="bi bi-calendar-check me-2"></i>My Availability
             </a>
 
-            <p class="text-uppercase text-muted small fw-bold px-4 mb-2" style="font-size: 0.75rem;">Workspace</p>
+            <p class="text-uppercase text-white small fw-bold px-4 mb-2" style="font-size: 0.75rem;">Workspace</p>
 
             <a th:href="@{/dashboard(clear=true)}" class="sidebar-item mb-2" th:classappend="${selectedGroup == null and chatUser == null ? 'active' : ''}">
                 <i class="bi bi-calendar3 me-2"></i>My Planner
@@ -78,9 +78,9 @@
             </a>
 
             <hr class="border-secondary mx-3 my-3">
-            <p class="text-uppercase text-muted small fw-bold px-4 mb-2" style="font-size: 0.75rem;">Study Groups</p>
+            <p class="text-uppercase text-white small fw-bold px-4 mb-2" style="font-size: 0.75rem;">Study Groups</p>
 
-            <div th:if="${groups.isEmpty()}" class="text-muted small px-4 mb-2">No groups yet.</div>
+            <div th:if="${groups.isEmpty()}" class="text-white small px-4 mb-2">No groups yet.</div>
 
             <a th:each="g : ${groups}"
                th:href="@{/dashboard(groupId=${g.id})}"
