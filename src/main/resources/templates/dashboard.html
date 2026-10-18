@@ -14,6 +14,10 @@
         .sidebar-item { padding: 10px 20px; color: #adb5bd; text-decoration: none; display: block; border-radius: 6px; margin: 0 10px 5px 10px; transition: 0.2s;}
         .sidebar-item:hover, .sidebar-item.active { background-color: #343a40; color: white; }
 
+        input.bg-dark::placeholder {
+            color: #adb5bd !important; /* A clean, readable grey */
+            opacity: 1;
+        }
         .chat-container { height: 100vh; display: flex; flex-direction: column; background: white; border-right: 1px solid #dee2e6; }
         .chat-header { padding: 20px; border-bottom: 1px solid #dee2e6; background: #fff; }
         .chat-history { flex-grow: 1; overflow-y: auto; padding: 20px; background-color: #f8f9fa; }
