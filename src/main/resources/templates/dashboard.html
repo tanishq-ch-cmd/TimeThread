@@ -248,7 +248,8 @@
                                 <span th:if="${iterStat.first}" class="badge bg-success" style="font-size: 0.65rem;">Top Match</span>
                             </div>
                             <h6 class="fw-bold mb-1">
-                                <span th:text="${slot.start}">10:00</span> - <span th:text="${slot.end}">12:00</span>
+                                <span th:text="${slot.start}">10:00</span> -
+                                <span th:text="${slot.end}">12:00</span>
                             </h6>
                         </div>
                     </div>
@@ -570,10 +571,13 @@
             ${isSelf ? '' : `<small class="d-block text-muted mb-1"></small>`}
             <span></span>
         </div>`;
+
         if (!isSelf) {
-            const senderName = msg.senderName || (msg.sender ? msg.sender.name : 'Member');
-            wrapper.querySelector('small').textContent = senderName;
+            // Aggressively checks all possible variable names from your Java backend
+            const actualName = msg.senderName || msg.name || msg.sender || (msg.sender ? msg.sender.name : 'Unknown User');
+            wrapper.querySelector('small').textContent = actualName;
         }
+
         wrapper.querySelector('span').textContent = msg.content;
         return wrapper;
     }
