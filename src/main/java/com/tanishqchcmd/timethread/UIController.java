@@ -7,6 +7,7 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import javax.crypto.SecretKey;
 import java.util.List;
 
 @Controller
@@ -26,7 +27,6 @@ public class UIController {
     private RoutineRepository routineRepository;
     @Autowired
     private GroupRepository groupRepository;
-
 
     @GetMapping("/")
     public String home() {
@@ -54,7 +54,7 @@ public class UIController {
         model.addAttribute("groups", groups);
 
         Group selectedGroup = null;
-        Student chatUser = null; // Represents the person you are DMing
+        Student chatUser = null;
 
         if (!Boolean.TRUE.equals(clear) && groupId != null) {
             selectedGroup = groups.stream().filter(g -> g.getId().equals(groupId)).findFirst().orElse(null);
@@ -67,17 +67,36 @@ public class UIController {
         model.addAttribute("selectedGroup", selectedGroup);
         model.addAttribute("chatUser", chatUser);
 
-        // Group Chat Messages
-        model.addAttribute("messages",
-                selectedGroup != null
-                        ? messageRepository.findByGroupIdOrderByTimestampAsc(selectedGroup.getId())
-                        : List.of());
+        // --- DECRYPTION PIPELINE ---
+        SecretKey masterKey = CryptoEngine.getMasterKey();
 
-        // Private Direct Messages
-        model.addAttribute("dmMessages",
-                chatUser != null
-                        ? dmRepository.findConversation(student, chatUser)
-                        : List.of());
+        // 1. Fetch and Decrypt Group Chat Messages
+        List<Message> groupMessages = selectedGroup != null
+                ? messageRepository.findByGroupIdOrderByTimestampAsc(selectedGroup.getId())
+                : List.of();
+
+        groupMessages.forEach(m -> {
+            try {
+                m.setContent(CryptoEngine.decrypt(m.getContent(), masterKey));
+            } catch (Exception e) {
+                // If it fails (e.g., an old plaintext message from before the encryption update), leave it as is
+            }
+        });
+        model.addAttribute("messages", groupMessages);
+
+        // 2. Fetch and Decrypt Private Direct Messages
+        List<DirectMessage> directMessages = chatUser != null
+                ? dmRepository.findConversation(student, chatUser)
+                : List.of();
+
+        directMessages.forEach(dm -> {
+            try {
+                dm.setContent(CryptoEngine.decrypt(dm.getContent(), masterKey));
+            } catch (Exception e) {
+                // Ignore exception for legacy plaintext messages
+            }
+        });
+        model.addAttribute("dmMessages", directMessages);
 
         // Schedule overlapping algorithm
         model.addAttribute("optimalSlots",
